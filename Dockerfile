@@ -1,31 +1,26 @@
-FROM php:8.2-apache
+FROM php:8.2-fpm
 
-# Fix MPM conflict — force mpm_prefork only (required for mod_php)
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
-    && a2enmod mpm_prefork
+# Install Nginx
+RUN apt-get update && apt-get install -y nginx && rm -rf /var/lib/apt/lists/*
 
-# Enable mod_rewrite for .htaccess
-RUN a2enmod rewrite
-
-# Install MySQL extensions
+# Install PHP MySQL extensions
 RUN docker-php-ext-install pdo pdo_mysql mysqli
 
-# Allow .htaccess overrides
-RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+# Copy Nginx site config
+COPY nginx.conf /etc/nginx/sites-enabled/default
 
-# Copy project files (config.php excluded via .dockerignore)
+# Copy all project files (config.php excluded via .dockerignore)
 COPY . /var/www/html/
 
-# Set correct permissions
+# Set permissions
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type f -name "*.php" -exec chmod 644 {} \; \
     && find /var/www/html -type d -exec chmod 755 {} \;
 
-# Entrypoint: sets Railway's $PORT at runtime, then starts Apache
+# Copy entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-EXPOSE 80
+EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD ["apache2-foreground"]
