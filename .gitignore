@@ -1,0 +1,4 @@
+config.php
+.qodo/
+.DS_Store
+*.log

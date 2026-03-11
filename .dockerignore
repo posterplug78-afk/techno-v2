@@ -1,0 +1,8 @@
+config.php
+.git
+.gitignore
+.qodo
+README.md
+Procfile
+nginx.conf
+docker-entrypoint.sh
