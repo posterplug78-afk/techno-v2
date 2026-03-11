@@ -1,23 +1,17 @@
 #!/bin/bash
-# Sets Apache to listen on Railway's injected $PORT at runtime
+set -e
 
-PORT="${PORT:-80}"
+PORT="${PORT:-8080}"
+echo "Starting EduQueue on port ${PORT}"
 
-# Write ports.conf
-echo "Listen ${PORT}" > /etc/apache2/ports.conf
+# Inject real port into Nginx config
+sed -i "s/PORT_PLACEHOLDER/${PORT}/g" /etc/nginx/sites-enabled/default
 
-# Write VirtualHost config
-cat > /etc/apache2/sites-enabled/000-default.conf << VHOST
-<VirtualHost *:${PORT}>
-    DocumentRoot /var/www/html
-    <Directory /var/www/html>
-        AllowOverride All
-        Require all granted
-    </Directory>
-    ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
-</VirtualHost>
-VHOST
+# Remove default nginx site if it exists separately
+rm -f /etc/nginx/sites-enabled/default.bak
 
-echo "Apache configured on port ${PORT}"
-exec "$@"
+# Start PHP-FPM in background
+php-fpm -D
+
+# Start Nginx in foreground (keeps container alive)
+exec nginx -g "daemon off;"
