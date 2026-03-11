@@ -1,15 +1,13 @@
 #!/bin/bash
-# docker-entrypoint.sh
-# Railway injects a $PORT env variable at runtime.
-# This script updates Apache to listen on that port before starting.
+# Sets Apache to listen on Railway's injected $PORT at runtime
 
 PORT="${PORT:-80}"
 
-# Update Apache to listen on the Railway-assigned port
+# Write ports.conf
 echo "Listen ${PORT}" > /etc/apache2/ports.conf
 
-# Update the VirtualHost to match
-cat > /etc/apache2/sites-enabled/000-default.conf <<EOF
+# Write VirtualHost config
+cat > /etc/apache2/sites-enabled/000-default.conf << VHOST
 <VirtualHost *:${PORT}>
     DocumentRoot /var/www/html
     <Directory /var/www/html>
@@ -19,9 +17,7 @@ cat > /etc/apache2/sites-enabled/000-default.conf <<EOF
     ErrorLog \${APACHE_LOG_DIR}/error.log
     CustomLog \${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
-EOF
+VHOST
 
-echo "Apache configured to listen on port ${PORT}"
-
-# Hand off to the CMD (apache2-foreground)
+echo "Apache configured on port ${PORT}"
 exec "$@"

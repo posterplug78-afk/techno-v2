@@ -1,24 +1,27 @@
 FROM php:8.2-apache
 
-# Enable Apache mod_rewrite
+# Fix MPM conflict — force mpm_prefork only (required for mod_php)
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+    && a2enmod mpm_prefork
+
+# Enable mod_rewrite for .htaccess
 RUN a2enmod rewrite
 
-# Install PHP extensions needed for MySQL
+# Install MySQL extensions
 RUN docker-php-ext-install pdo pdo_mysql mysqli
 
-# Allow .htaccess overrides (needed for mod_rewrite)
+# Allow .htaccess overrides
 RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
-# Copy all project files into the web server folder
-# config.php is excluded via .dockerignore — credentials come from env vars
+# Copy project files (config.php excluded via .dockerignore)
 COPY . /var/www/html/
 
-# Set permissions
+# Set correct permissions
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type f -name "*.php" -exec chmod 644 {} \; \
     && find /var/www/html -type d -exec chmod 755 {} \;
 
-# Copy and enable the entrypoint script that sets PORT at runtime
+# Entrypoint: sets Railway's $PORT at runtime, then starts Apache
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
